@@ -211,6 +211,33 @@ def cipher16(plain_text: str, w: str):
 
   return state
 
+def decipher(cript: str, w: str):
+  res = ''
+  for i in range(0, len(cript), 16):
+    res += decipher16(cript[i:i+16], w)
+  return res
+
+def decipher16(cript: str, w: str):
+  state = str_to_int_4x4_matrix(cript)
+  key = str_to_int_4x4_matrix(w)
+  state = add_round_key(state, key)
+  print(f'add_round_key: {[hex(j) for i in state for j in i]}')
+
+  for round in range(1, 10):
+    state = shift_rows(state, False)
+    print(f'shift_rows: {[hex(j) for i in state for j in i]}')
+    state = sub_bytes(state, False)
+    print(f'sub_bytes: {[hex(j) for i in state for j in i]}')
+    state = add_round_key(state, w[round*4:(round+1)*4])
+    print(f'add_round_key: {[hex(j) for i in state for j in i]}')
+    state = mix_columns(state, False)
+    print(f'mix_columns: {[hex(j) for i in state for j in i]}')
+
+  state = shift_rows(state, False)
+  state = sub_bytes(state, False)
+  state = add_round_key(state, w[40:44])
+  return state
+
 
 def main():
   # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
