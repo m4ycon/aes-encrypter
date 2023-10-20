@@ -58,6 +58,12 @@ RCON = [
     0xD4, 0xB3, 0x7D, 0xFA, 0xEF, 0xC5, 0x91, 0x39
 ]
 
+def get_hex_list_str(l: list[int]):
+  return ''.join([hex(i)[2:].zfill(2) for i in l])
+
+def get_matrix_str(m: list[list[int]]):
+  return '\n'.join([get_hex_list_str(i) for i in m])
+
 def xor_list(a: list[int], b: list[int]):
   return [i ^ j for i, j in zip(a, b)]
 
@@ -76,24 +82,30 @@ def key_expansion(key: str):
     return [RCON[i], 0, 0, 0]
 
   def ek(offset: int):
-    return eklist[offset:offset+4]
+    return eklist[offset//4][offset%4]
 
   def k(offset: int):
-    return klist[offset:offset+4]
+    return klist[offset//4][offset%4]
 
+  block = []
   for i in range(4):
-    eklist.extend(k(i*4))
+    block.append(k(i*4))
+  eklist.append(block)
 
-  for i in range(4, 44):
-    block = []
-    if i % 4 == 0:
-      a = sub_word(rot_word(ek((i-1)*4)))
-      b = rcon((i//4)-1)
-      c = ek((i-4)*4)
-      block = xor_list(xor_list(a, b), c)
-    else:
-      block = xor_list(ek((i-1)*4), ek((i-4)*4))
-    eklist.extend(block)
+  print(f'r0: {get_hex_list_str(eklist)}')
+
+  for j in range(4, 44, 4):
+    i, block = j, []
+    a = sub_word(rot_word(ek((i-1)*4)))
+    b = rcon((i//4)-1)
+    c = ek((i-4)*4)
+    block.append(xor_list(xor_list(a, b), c)); i += 1
+    block.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
+    block.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
+    block.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
+
+    eklist.append(block)
+    print(f'r{j//4}: {get_hex_list_str(block)}')
 
   return eklist
 
@@ -193,17 +205,17 @@ def cipher16(plain_text: str, w: str):
   state = str_to_int_4x4_matrix(plain_text)
   key = str_to_int_4x4_matrix(w)
   state = add_round_key(state, key)
-  print(f'add_round_key: {[hex(j) for i in state for j in i]}')
+  print(f'add_round_key: {get_matrix_str(state)}')
 
   for round in range(1, 10):
     state = sub_bytes(state)
-    print(f'sub_bytes: {[hex(j) for i in state for j in i]}')
+    print(f'sub_bytes: {get_matrix_str(state)}')
     state = shift_rows(state)
-    print(f'shift_rows: {[hex(j) for i in state for j in i]}')
+    print(f'shift_rows: {get_matrix_str(state)}')
     state = mix_columns(state)
-    print(f'mix_columns: {[hex(j) for i in state for j in i]}')
+    print(f'mix_columns: {get_matrix_str(state)}')
     state = add_round_key(state, w[round*4:(round+1)*4])
-    print(f'add_round_key: {[hex(j) for i in state for j in i]}')
+    print(f'add_round_key: {get_matrix_str(state)}')
 
   state = sub_bytes(state)
   state = shift_rows(state)
@@ -218,10 +230,10 @@ def main():
   plain_text = 'Two One Nine Two'
   # ciphertext = '29C3505F571420F6402299B31A02D73A'
 
-  # w = key_expansion(key)
-  # print(f'key_expansion: {w}')
-  cipher_text = cipher(plain_text, key)
-  print('cipher_text: ' + cipher_text)
+  w = key_expansion(bytes.fromhex('000102030405060708090a0b0c0d0e0f').decode('ascii'))
+  print(f'key_expansion result: {w}')
+  # cipher_text = cipher(plain_text, key)
+  # print('cipher_text: ' + cipher_text)
 
 
 main()
