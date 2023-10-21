@@ -62,16 +62,15 @@ def get_hex_list_str(l: list[int]):
   return ''.join([hex(i)[2:].zfill(2) for i in l])
 
 def get_matrix_str(m: list[list[int]]):
-  return '\n'.join([get_hex_list_str(i) for i in m])
-  # return ''.join([get_hex_list_str(i) for i in m])
+  return ''.join([get_hex_list_str(i) for i in m])
 
 def xor_list(a: list[int], b: list[int]):
   return [i ^ j for i, j in zip(a, b)]
 
 def key_expansion(key: str):
   ext_key = [ord(c) for c in key[:16]] + [0]*(16 - len(key))
-  klist: list[list[int]] = [ext_key[i:i+4] for i in range(0, 16, 4)]
-  eklist: list[list[int]] = []
+  klist: list[int] = [ext_key[i:i+4] for i in range(0, 16, 4)]
+  eklist: list[int] = []
 
   def rot_word(word: list[int]):
     return word[1:] + [word[0]]
@@ -88,24 +87,22 @@ def key_expansion(key: str):
   def k(offset: int):
     return klist[offset//4]
 
-  block = []
   for i in range(0, 16, 4):
-    block.append(k(i))
-  eklist.extend(block)
+    eklist.append(k(i))
 
-  print(f'r0: \n{get_matrix_str(eklist[0:4])}')
+  # print(f'r0: \n{get_matrix_str(eklist[0:4])}')
 
   for j in range(4, 44, 4):
-    i, block = j, []
+    i = j
     a = sub_word(rot_word(ek((i-1)*4)))
-    b = rcon((i//4)-1)
+    b = rcon(i//4)
     c = ek((i-4)*4)
     eklist.append(xor_list(xor_list(a, b), c)); i += 1
     eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
     eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
     eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
 
-    print(f'r{j//4}: \n{get_matrix_str(eklist[j//4:j//4+4])}')
+    # print(f'r{j//4}: \n{get_matrix_str(eklist[j:j+4])}')
 
   return eklist
 
@@ -195,17 +192,17 @@ def str_to_int_4x4_matrix(s: str):
         inverse_matrix[j][i] = matrix[i][j]
   return inverse_matrix
 
-def cipher(plain_text: str, w: str):
-  res = ''
+def cipher(plain_text: str, w: list[list[int]]):
+  res = []
   for i in range(0, len(plain_text), 16):
-    res += cipher16(plain_text[i:i+16], w)
+    res.extend(cipher16(plain_text[i:i+16], w))
   return res
 
-def cipher16(plain_text: str, w: str):
+def cipher16(plain_text: str, w: list[list[int]]):
   state = str_to_int_4x4_matrix(plain_text)
-  key = str_to_int_4x4_matrix(w)
-  state = add_round_key(state, key)
-  print(f'add_round_key: \n{get_matrix_str(state)}')
+  print(f'state: \n{get_matrix_str(state)}')
+  state = add_round_key(state, w[0:4])
+  print(f'add_round_key: \n{get_matrix_str(state)}\n')
 
   for round in range(1, 10):
     state = sub_bytes(state)
@@ -215,7 +212,7 @@ def cipher16(plain_text: str, w: str):
     state = mix_columns(state)
     print(f'mix_columns: \n{get_matrix_str(state)}')
     state = add_round_key(state, w[round*4:(round+1)*4])
-    print(f'add_round_key: \n{get_matrix_str(state)}')
+    print(f'add_round_key: \n{get_matrix_str(state)}\n')
 
   state = sub_bytes(state)
   state = shift_rows(state)
@@ -252,18 +249,20 @@ def decipher16(cript: str, w: str):
 
 
 def main():
+  # http://lpb.canb.auug.org.au/adfa/src/AEScalc/index.html
   # 000102030405060708090a0b0c0d0e0f
   key = bytes([i for i in range(16)]).decode('ascii')
   w = key_expansion(key)
   print(f'key_expansion result: {w}')
 
-  # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
-  key = 'Thats my Kung Fu'
-  plain_text = 'Two One Nine Two'
-  # ciphertext = '29C3505F571420F6402299B31A02D73A'
+  # # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
+  # key = 'Thats my Kung Fu'
+  # plain_text = 'Two One Nine Two'
+  # # ciphertext = '29C3505F571420F6402299B31A02D73A'
 
-  # cipher_text = cipher(plain_text, key)
-  # print('cipher_text: ' + cipher_text)
+  # w = key_expansion(key)
+  # cipher_text = cipher(plain_text, w)
+  # print(f'cipher_text: {get_matrix_str(cipher_text)}')
 
 
 main()
