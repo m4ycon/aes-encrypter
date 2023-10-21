@@ -183,14 +183,17 @@ def gf_mul(n1: int, n2: int):
   return E[L[n1] + L[n2]] if L[n1] + L[n2] <= 0xFF else E[L[n1] + L[n2] - 0xFF]
 
 
-def str_to_int_4x4_matrix(s: str):
-  matrix = [ord(i) for i in s]
-  matrix = [matrix[i:i+4] for i in range(0, len(matrix), 4)]
+def inv_matrix(m: list[list[int]]):
   inverse_matrix = [[0 for _ in range(4)] for _ in range(4)]
   for i in range(4):
     for j in range(4):
-        inverse_matrix[j][i] = matrix[i][j]
+        inverse_matrix[j][i] = m[i][j]
   return inverse_matrix
+
+def str_to_int_4x4_matrix(s: str):
+  matrix = [ord(i) for i in s]
+  matrix = [matrix[i:i+4] for i in range(0, len(matrix), 4)]
+  return inv_matrix(matrix)
 
 def cipher(plain_text: str, w: list[list[int]]):
   res = []
@@ -258,6 +261,9 @@ def decipher16(cript: str, w: str):
 def hex_str_to_char_str(s: str):
   res = [s[i:i+2] for i in range(0, len(s), 2)]
   res = [chr(i) for i in [int(i, 16) for i in res]]
+  res = [res[i:i+4] for i in range(0, len(res), 4)]
+  res = inv_matrix(res)
+  res = [res[i][j] for i in range(0, 4) for j in range(0, 4)]
   return ''.join(res)
 
 def main():
