@@ -199,10 +199,13 @@ def cipher(plain_text: str, w: list[list[int]]):
   return res
 
 def cipher16(plain_text: str, w: list[list[int]]):
+  print(f'plain_text: {plain_text}')
   state = str_to_int_4x4_matrix(plain_text)
   print(f'state: \n{get_matrix_str(state)}')
+  print(f'key: \n{get_matrix_str(w[0:4])}')
   state = add_round_key(state, w[0:4])
-  print(f'add_round_key: \n{get_matrix_str(state)}\n')
+  print(f'add_round_key: \n{get_matrix_str(state)}')
+  print(f'r0: \n{get_matrix_str(state)}\n')
 
   for round in range(1, 10):
     state = sub_bytes(state)
@@ -212,11 +215,15 @@ def cipher16(plain_text: str, w: list[list[int]]):
     state = mix_columns(state)
     print(f'mix_columns: \n{get_matrix_str(state)}')
     state = add_round_key(state, w[round*4:(round+1)*4])
-    print(f'add_round_key: \n{get_matrix_str(state)}\n')
+    print(f'key: \n{get_matrix_str(w[round*4:(round+1)*4])}')
+    print(f'add_round_key: \n{get_matrix_str(state)}')
+    print(f'r{round}: \n{get_matrix_str(state)}\n')
 
   state = sub_bytes(state)
   state = shift_rows(state)
   state = add_round_key(state, w[40:44])
+  print(f'key: \n{get_matrix_str(w[40:44])}')
+  print(f'r10: \n{get_matrix_str(state)}\n')
 
   return state
 
@@ -248,12 +255,20 @@ def decipher16(cript: str, w: str):
   return state
 
 
+def hex_str_to_char_str(s: str):
+  res = [s[i:i+2] for i in range(0, len(s), 2)]
+  res = [chr(i) for i in [int(i, 16) for i in res]]
+  return ''.join(res)
+
 def main():
   # http://lpb.canb.auug.org.au/adfa/src/AEScalc/index.html
-  # 000102030405060708090a0b0c0d0e0f
-  key = bytes([i for i in range(16)]).decode('ascii')
+  key = bytes([i for i in range(16)]).decode('ascii') # key 000102030405060708090a0b0c0d0e0f
   w = key_expansion(key)
-  print(f'key_expansion result: {w}')
+
+  plain_text = hex_str_to_char_str('00112233445566778899aabbccddeeff')
+  cipher_text = cipher(plain_text, w)
+  print(f'cipher_text: {get_matrix_str(cipher_text)}') # expect 69c4e0d86a7b0430d8cdb78070b4c55a
+ 
 
   # # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
   # key = 'Thats my Kung Fu'
