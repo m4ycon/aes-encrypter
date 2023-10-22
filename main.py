@@ -1,5 +1,5 @@
 
-DEBUG = False
+DEBUG = True
 
 def printd(*args, **kwargs):
   if DEBUG:
@@ -74,9 +74,16 @@ def xor_list(a: list[int], b: list[int]):
   return [i ^ j for i, j in zip(a, b)]
 
 def key_expansion(key: str):
+  nrounds, key_size = 44, 16
+  if len(key) > 16:
+    nrounds, key_size = 52, 24
+  # if len(key) > 24:
+  #   nrounds, key_size = 60, 32
+  jumps = key_size // 4
+
   printd(f'key: {key}')
-  ext_key = [ord(c) for c in key[:16]] + [0]*(16 - len(key))
-  klist: list[list[int]] = [ext_key[i:i+4] for i in range(0, 16, 4)]
+  ext_key = [ord(c) for c in key[:key_size]] + [0]*(key_size - len(key))
+  klist: list[list[int]] = [ext_key[i:i+4] for i in range(0, key_size, 4)]
   eklist: list[list[int]] = []
 
   def rot_word(word: list[int]):
@@ -94,22 +101,37 @@ def key_expansion(key: str):
   def k(offset: int):
     return klist[offset//4]
 
-  for i in range(0, 16, 4):
+  # first round
+  printd(key_size, nrounds, jumps)
+  for i in range(0, key_size, 4):
     eklist.append(k(i))
+    printd(f'r{i//4}: {get_hex_list_str(eklist[i//4])}')
 
-  printd(f'r0: \n{get_matrix_str(eklist[0:4])}')
 
-  for j in range(4, 44, 4):
-    i = j
+  # middle rounds
+  for i in range(len(eklist), nrounds-jumps, jumps):
+    printd('--')
     a = sub_word(rot_word(ek((i-1)*4)))
     b = rcon(i//4)
     c = ek((i-4)*4)
-    eklist.append(xor_list(xor_list(a, b), c)); i += 1
-    eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
-    eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
-    eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
+    eklist.append(xor_list(xor_list(a, b), c))
+    printd(f'r{i}: {get_hex_list_str(eklist[i])}')
 
-    printd(f'r{j//4}: \n{get_matrix_str(eklist[j:j+4])}')
+    for j in range(1, jumps):
+      eklist.append(xor_list(ek((i+j-1)*4), ek((i+j-4)*4)))
+      printd(f'r{i+j}: {get_hex_list_str(eklist[i+j])}')
+
+  printd('--')
+  # last round
+  a = sub_word(rot_word(ek((i-1)*4)))
+  b = rcon(i//4)
+  c = ek((i-4)*4)
+  eklist.append(xor_list(xor_list(a, b), c))
+  printd(f'r{len(eklist)-1}: {get_hex_list_str(eklist[i])}')
+  
+  for i in range(3):
+    eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4)))
+    printd(f'r{len(eklist)-1}: {get_hex_list_str(eklist[i])}')
 
   return eklist
 
@@ -311,7 +333,9 @@ def main():
  
 
   # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
-  key = 'Thats my Kung Fu'
+  # key = 'Thats my Kung Fu'
+  # key = 'Thats my Kung Fu12345678'
+  key = 'Thats my Kung Fu1234567812345678'
   plain_text = 'Two One Nine Two'
   # ciphertext = '29C3505F571420F6402299B31A02D73A'
 
