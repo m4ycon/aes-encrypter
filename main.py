@@ -76,8 +76,8 @@ def xor_list(a: list[int], b: list[int]):
 def key_expansion(key: str):
   printd(f'key: {key}')
   ext_key = [ord(c) for c in key[:16]] + [0]*(16 - len(key))
-  klist: list[int] = [ext_key[i:i+4] for i in range(0, 16, 4)]
-  eklist: list[int] = []
+  klist: list[list[int]] = [ext_key[i:i+4] for i in range(0, 16, 4)]
+  eklist: list[list[int]] = []
 
   def rot_word(word: list[int]):
     return word[1:] + [word[0]]
@@ -206,7 +206,9 @@ def str_to_int_4x4_matrix(s: str):
   matrix = [matrix[i:i+4] for i in range(0, len(matrix), 4)]
   return inv_matrix(matrix)
 
-def cipher(plain_text: str, w: list[list[int]]):
+def cipher(plain_text: str, key: str):
+  w = key_expansion(key)
+
   res = []
   for i in range(0, len(plain_text), 16):
     res.extend(cipher16(plain_text[i:i+16], w))
@@ -246,7 +248,9 @@ def cipher16(plain_text: str, w: list[list[int]]):
   return inv_matrix(state)
 
 
-def decipher(cript: str, w: list[list[int]]):
+def decipher(cript: str, key: str):
+  w = key_expansion(key)
+
   res = []
   for i in range(0, len(cript), 16):
     res.extend(decipher16(cript[i:i+16], w))
@@ -311,10 +315,10 @@ def main():
   plain_text = 'Two One Nine Two'
   # ciphertext = '29C3505F571420F6402299B31A02D73A'
 
-  w = key_expansion(key)
-  cipher_text = cipher(plain_text, w)
-  msg = decipher(cipher_text, w)
-  print(f'mensagem original: {plain_text}\nchave: {key}')
+  cipher_text = cipher(plain_text, key)
+  msg = decipher(cipher_text, key)
+  print(f'chave: {key}')
+  print(f'mensagem original: {plain_text}')
   print(f'mensagem cifrada: {cipher_text}')
   print(f'mensagem decifrada: {msg}')
 
