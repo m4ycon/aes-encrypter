@@ -1,4 +1,10 @@
 
+DEBUG = False
+
+def printd(*args, **kwargs):
+  if DEBUG:
+    print(*args, **kwargs)
+
 SBOX = [
   0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
   0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -68,7 +74,7 @@ def xor_list(a: list[int], b: list[int]):
   return [i ^ j for i, j in zip(a, b)]
 
 def key_expansion(key: str):
-  print(f'key: {key}')
+  printd(f'key: {key}')
   ext_key = [ord(c) for c in key[:16]] + [0]*(16 - len(key))
   klist: list[int] = [ext_key[i:i+4] for i in range(0, 16, 4)]
   eklist: list[int] = []
@@ -91,7 +97,7 @@ def key_expansion(key: str):
   for i in range(0, 16, 4):
     eklist.append(k(i))
 
-  # print(f'r0: \n{get_matrix_str(eklist[0:4])}')
+  printd(f'r0: \n{get_matrix_str(eklist[0:4])}')
 
   for j in range(4, 44, 4):
     i = j
@@ -103,7 +109,7 @@ def key_expansion(key: str):
     eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
     eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
 
-    # print(f'r{j//4}: \n{get_matrix_str(eklist[j:j+4])}')
+    printd(f'r{j//4}: \n{get_matrix_str(eklist[j:j+4])}')
 
   return eklist
 
@@ -208,34 +214,34 @@ def cipher(plain_text: str, w: list[list[int]]):
   return ''.join(chr(valor) for valor in [y for x in res for y in x])
 
 def cipher16(plain_text: str, w: list[list[int]]):
-  print(f'plain_text: {plain_text}')
+  printd(f'plain_text: {plain_text}')
   state = str_to_int_4x4_matrix(plain_text)
-  print(f'state: \n{get_matrix_str(state)}')
-  print(f'key: \n{get_matrix_str(inv_matrix(w[0:4]))}')
+  printd(f'state: \n{get_matrix_str(state)}')
+  printd(f'key: \n{get_matrix_str(inv_matrix(w[0:4]))}')
   state = add_round_key(state, w[0:4])
-  print(f'add_round_key: \n{get_matrix_str(state)}')
-  print(f'r0: \n{get_matrix_str(inv_matrix(state))}\n')
+  printd(f'add_round_key: \n{get_matrix_str(state)}')
+  printd(f'r0: \n{get_matrix_str(inv_matrix(state))}\n')
 
   for round in range(1, 10):
     state = sub_bytes(state)
-    print(f'sub_bytes: \n{get_matrix_str(state)}')
+    printd(f'sub_bytes: \n{get_matrix_str(state)}')
     state = shift_rows(state)
-    print(f'shift_rows: \n{get_matrix_str(state)}')
+    printd(f'shift_rows: \n{get_matrix_str(state)}')
     state = mix_columns(state)
-    print(f'mix_columns: \n{get_matrix_str(state)}')
+    printd(f'mix_columns: \n{get_matrix_str(state)}')
     state = add_round_key(state, w[round*4:(round+1)*4])
-    print(f'key: \n{get_matrix_str(inv_matrix(w[round*4:(round+1)*4]))}')
-    print(f'add_round_key: \n{get_matrix_str(state)}')
-    print(f'r{round}: \n{get_matrix_str(inv_matrix(state))}\n')
+    printd(f'key: \n{get_matrix_str(inv_matrix(w[round*4:(round+1)*4]))}')
+    printd(f'add_round_key: \n{get_matrix_str(state)}')
+    printd(f'r{round}: \n{get_matrix_str(inv_matrix(state))}\n')
 
   state = sub_bytes(state)
-  print(f'sub_bytes: \n{get_matrix_str(state)}')
+  printd(f'sub_bytes: \n{get_matrix_str(state)}')
   state = shift_rows(state)
-  print(f'shift_rows: \n{get_matrix_str(state)}')
+  printd(f'shift_rows: \n{get_matrix_str(state)}')
   state = add_round_key(state, w[40:44])
-  print(f'key: \n{get_matrix_str(inv_matrix(w[40:44]))}')
-  print(f'add_round_key: \n{get_matrix_str(state)}')
-  print(f'r10: \n{get_matrix_str(inv_matrix(state))}\n')
+  printd(f'key: \n{get_matrix_str(inv_matrix(w[40:44]))}')
+  printd(f'add_round_key: \n{get_matrix_str(state)}')
+  printd(f'r10: \n{get_matrix_str(inv_matrix(state))}\n')
 
   return inv_matrix(state)
 
@@ -247,34 +253,34 @@ def decipher(cript: str, w: list[list[int]]):
   return ''.join(chr(valor) for valor in [y for x in res for y in x])
 
 def decipher16(cript: str, w: list[list[int]]):
-  print(f'cript: {cript}')
+  printd(f'cript: {cript}')
   state = str_to_int_4x4_matrix(cript)
-  print(f'state: \n{get_matrix_str(state)}')
-  print(f'key: \n{get_matrix_str(inv_matrix(w[40:44]))}')
+  printd(f'state: \n{get_matrix_str(state)}')
+  printd(f'key: \n{get_matrix_str(inv_matrix(w[40:44]))}')
   state = add_round_key(state, w[40:44])
-  print(f'add_round_key: \n{get_matrix_str(state)}')
-  print(f'r0: \n{get_matrix_str(inv_matrix(state))}\n')
+  printd(f'add_round_key: \n{get_matrix_str(state)}')
+  printd(f'r0: \n{get_matrix_str(inv_matrix(state))}\n')
 
   for round in range(1, 10):
     state = shift_rows(state, False)
-    print(f'shift_rows: \n{get_matrix_str(state)}')
+    printd(f'shift_rows: \n{get_matrix_str(state)}')
     state = sub_bytes(state, False)
-    print(f'sub_bytes: \n{get_matrix_str(state)}')
-    print(f'key: \n{get_matrix_str(inv_matrix(w[(10-round)*4:(11-round)*4]))}')
+    printd(f'sub_bytes: \n{get_matrix_str(state)}')
+    printd(f'key: \n{get_matrix_str(inv_matrix(w[(10-round)*4:(11-round)*4]))}')
     state = add_round_key(state, w[(10-round)*4:(11-round)*4])
-    print(f'add_round_key: \n{get_matrix_str(state)}')
+    printd(f'add_round_key: \n{get_matrix_str(state)}')
     state = mix_columns(state, False)
-    print(f'mix_columns: \n{get_matrix_str(state)}')
-    print(f'r{round}: \n{get_matrix_str(inv_matrix(state))}\n')
+    printd(f'mix_columns: \n{get_matrix_str(state)}')
+    printd(f'r{round}: \n{get_matrix_str(inv_matrix(state))}\n')
 
   state = shift_rows(state, False)
-  print(f'shift_rows: \n{get_matrix_str(state)}')
+  printd(f'shift_rows: \n{get_matrix_str(state)}')
   state = sub_bytes(state, False)
-  print(f'sub_bytes: \n{get_matrix_str(state)}')
+  printd(f'sub_bytes: \n{get_matrix_str(state)}')
   state = add_round_key(state, w[0:4])
-  print(f'add_round_key: \n{get_matrix_str(state)}')
-  print(f'key: \n{get_matrix_str(inv_matrix(w[0:4]))}')
-  print(f'r10: \n{get_matrix_str(inv_matrix(state))}\n')
+  printd(f'add_round_key: \n{get_matrix_str(state)}')
+  printd(f'key: \n{get_matrix_str(inv_matrix(w[0:4]))}')
+  printd(f'r10: \n{get_matrix_str(inv_matrix(state))}\n')
 
   return inv_matrix(state)
 
@@ -288,24 +294,29 @@ def hex_str_to_char_str(s: str):
   return ''.join(res)
 
 def main():
-  # http://lpb.canb.auug.org.au/adfa/src/AEScalc/index.html
+  # # http://lpb.canb.auug.org.au/adfa/src/AEScalc/index.html
   # key = bytes([i for i in range(16)]).decode('ascii') # key 000102030405060708090a0b0c0d0e0f
   # w = key_expansion(key)
 
   # plain_text = hex_str_to_char_str('00112233445566778899aabbccddeeff')
   # cipher_text = cipher(plain_text, w)
-  # print(f'cipher_text: {get_matrix_str(cipher_text)}') # expect 69c4e0d86a7b0430d8cdb78070b4c55a
+  # decipher_text = decipher(cipher_text, w)
+  # print(f'plain_text: {plain_text}') # expect 00112233445566778899aabbccddeeff
+  # print(f'cipher_text: {cipher_text}') # expect 69c4e0d86a7b0430d8cdb78070b4c55a
+  # print(f'decipher_text: {decipher_text}') # expect 00112233445566778899aabbccddeeff
  
 
-  # # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
+  # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
   key = 'Thats my Kung Fu'
   plain_text = 'Two One Nine Two'
-  # # ciphertext = '29C3505F571420F6402299B31A02D73A'
+  # ciphertext = '29C3505F571420F6402299B31A02D73A'
 
   w = key_expansion(key)
   cipher_text = cipher(plain_text, w)
   msg = decipher(cipher_text, w)
-  print(f'mensagem: {msg}')
+  print(f'mensagem original: {plain_text}\nchave: {key}')
+  print(f'mensagem cifrada: {cipher_text}')
+  print(f'mensagem decifrada: {msg}')
 
 
 main()
