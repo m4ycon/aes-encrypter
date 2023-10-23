@@ -129,11 +129,11 @@ def key_expansion(key: str):
       printd(f'r{i+j}: {get_hex_list_str(eklist[i+j])}')
 
   # last round
-  eklist.append(op1(i))
-  printd(f'--\nr{len(eklist)-1}: {get_hex_list_str(eklist[i])}')
-  for i in range(3):
-    eklist.append(op2(i))
-    printd(f'r{len(eklist)-1}: {get_hex_list_str(eklist[i])}')
+  eklist.append(op1(nrounds-jump))
+  printd(f'--\nr{nrounds-jump}: {get_hex_list_str(eklist[nrounds-jump])}')
+  for i in range(1, 4):
+    eklist.append(op2(nrounds-jump+i))
+    printd(f'r{nrounds-jump+i}: {get_hex_list_str(eklist[-1])}')
   printd()
 
   return eklist
