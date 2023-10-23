@@ -297,7 +297,7 @@ def decipher16(cript: str, w: list[list[int]], nround: int):
   printd(f'add_round_key: \n{get_matrix_str(state)}')
   printd(f'r0: \n{get_matrix_str(inv_matrix(state))}\n')
 
-  for round in range(1, 10):
+  for round in range(1, nround+1):
     state = shift_rows(state, False)
     printd(f'shift_rows: \n{get_matrix_str(state)}')
     state = sub_bytes(state, False)
