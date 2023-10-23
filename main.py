@@ -77,9 +77,9 @@ def key_expansion(key: str):
   nrounds, key_size = 44, 16
   if len(key) > 16:
     nrounds, key_size = 52, 24
-  # if len(key) > 24:
-  #   nrounds, key_size = 60, 32
-  jumps = key_size // 4
+  if len(key) > 24:
+    nrounds, key_size = 60, 32
+  jump = key_size // 4
 
   printd(f'key: {key}')
   ext_key = [ord(c) for c in key[:key_size]] + [0]*(key_size - len(key))
@@ -102,14 +102,14 @@ def key_expansion(key: str):
     return klist[offset//4]
 
   # first round
-  printd(key_size, nrounds, jumps)
+  printd(key_size, nrounds, jump)
   for i in range(0, key_size, 4):
     eklist.append(k(i))
     printd(f'r{i//4}: {get_hex_list_str(eklist[i//4])}')
 
 
   # middle rounds
-  for i in range(len(eklist), nrounds-jumps, jumps):
+  for i in range(len(eklist), nrounds-jump, jump):
     printd('--')
     a = sub_word(rot_word(ek((i-1)*4)))
     b = rcon(i//4)
@@ -117,8 +117,11 @@ def key_expansion(key: str):
     eklist.append(xor_list(xor_list(a, b), c))
     printd(f'r{i}: {get_hex_list_str(eklist[i])}')
 
-    for j in range(1, jumps):
-      eklist.append(xor_list(ek((i+j-1)*4), ek((i+j-4)*4)))
+    for j in range(1, jump):
+      if jump == 8 and j == 4:
+        eklist.append(xor_list(sub_word(ek((i+j-1)*4)), ek((i+j-4)*4)))
+      else:
+        eklist.append(xor_list(ek((i+j-1)*4), ek((i+j-4)*4)))
       printd(f'r{i+j}: {get_hex_list_str(eklist[i+j])}')
 
   printd('--')
@@ -132,6 +135,7 @@ def key_expansion(key: str):
   for i in range(3):
     eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4)))
     printd(f'r{len(eklist)-1}: {get_hex_list_str(eklist[i])}')
+  printd()
 
   return eklist
 
