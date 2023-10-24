@@ -97,54 +97,47 @@ def key_expansion(key: str):
     return [RCON[i], 0, 0, 0]
 
   def ek(offset: int):
-    return eklist[offset//4]
+    return eklist[offset]
 
   def k(offset: int):
-    return klist[offset//4]
+    return klist[offset]
   
   def op1(i: int):
-    a = sub_word(rot_word(ek((i-1)*4)))
-    b = rcon(i//4)
-    c = ek((i-4)*4)
+    a = sub_word(rot_word(ek(i-1)))
+    b = rcon(i//jump)
+    c = ek(i-jump)
     return xor_list(xor_list(a, b), c)
   
   def op2(i: int):
-    return xor_list(ek((i-1)*4), ek((i-4)*4))
+    # print(f'eklist: {eklist}')
+    print(f'op2: {i-1} {i-jump}, {get_hex_list_str(ek(i-1))}^{get_hex_list_str(ek(i-jump))}')
+    return xor_list(ek(i-1), ek(i-jump))
   
   def op3(i: int):
-    return xor_list(sub_word(ek((i-1)*4)), ek((i-4)*4))
+    return xor_list(sub_word(ek(i-1)), ek(i-jump))
 
-  # first round
+  # first rounds
   for i in range(0, key_size, 4):
-    eklist.append(k(i))
+    eklist.append(k(i//4))
     printd(f'r{i//4}: {get_hex_list_str(eklist[i//4])}')
 
-
-  # middle rounds
-  for i in range(len(eklist), nrounds-jump, jump):
-    eklist.append(op1(i))
-    printd(f'--\nr{i}: {get_hex_list_str(eklist[i])}')
-
-    for j in range(1, jump):
-      eklist.append(op3(i+j) if jump == 8 and j == 4 else op2(i+j))
-      printd(f'r{i+j}: {get_hex_list_str(eklist[i+j])}')
-
-  # last round
-  eklist.append(op1(nrounds-jump))
-  printd(f'--\nr{nrounds-jump}: {get_hex_list_str(eklist[nrounds-jump])}')
-  for i in range(1, 4):
-    eklist.append(op2(nrounds-jump+i))
-    printd(f'r{nrounds-jump+i}: {get_hex_list_str(eklist[-1])}')
-  printd()
+  for i in range(len(eklist), nrounds):
+    if (i % jump == 0):
+      eklist.append(op1(i))
+      printd(f'--\nr{i}: {get_hex_list_str(eklist[i])}')
+    else:
+      eklist.append(op3(i) if jump == 8 and (i+4)%8 == 0 else op2(i))
+      printd(f'r{i}: {get_hex_list_str(eklist[i])}')
 
   return eklist
 
 def sub_bytes(state: list[list[int]], crypt: bool = True):
+  new_state = [[0 for _ in range(4)] for _ in range(4)]
   lookup = SBOX if crypt else INV_SBOX
   for r in range(0, 4):
     for c in range(0, 4):
-      state[r][c] = lookup[state[r][c]]
-  return state
+      new_state[r][c] = lookup[state[r][c]]
+  return new_state
 
 def shift_rows(state: list[list[int]], crypt: bool = True):
   for rows in range(0, 4):
@@ -244,6 +237,7 @@ def cipher(plain_text: str, key: str, nround: int = 10):
 def cipher16(plain_text: str, w: list[list[int]], nround: int):
   kinterval = 0
   printd(f'plain_text: {plain_text}')
+  printd(f"hex plain_text: {get_hex_list_str([ord(x) for x in plain_text])}")
   state = str_to_int_4x4_matrix(plain_text)
   printd(f'state: \n{get_matrix_str(state)}')
   printd(f'key: \n{get_matrix_str(w[kinterval:kinterval+4])}')
@@ -343,10 +337,10 @@ def main():
 
   # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
   # key = 'Thats my Kung Fu' # 16 bytes 
-  # # key = 'Thats my Kung Fu12345678' # 24 bytes
-  # # key = 'Thats my Kung Fu1234567812345678' # 32 bytes
+  # key = 'Thats my Kung Fu12345678' # 24 bytes
+  # key = 'Thats my Kung Fu1234567812345678' # 32 bytes
   # plain_text = 'Two One Nine Two Three Four'
-  # nround = int(input('nround: '))
+  # nround = int(input('nround (10/12/14): '))
   # # ciphertext = '29C3505F571420F6402299B31A02D73A'
 
   # cipher_text = cipher(plain_text, key, nround)
