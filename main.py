@@ -1,5 +1,5 @@
 
-DEBUG = True
+DEBUG = False
 
 def printd(*args, **kwargs):
   if DEBUG:
@@ -74,7 +74,7 @@ def xor_list(a: list[int], b: list[int]):
   return [i ^ j for i, j in zip(a, b)]
 
 def key_expansion(key: str):
-  printd(f"hex key: {get_hex_list_str([ord(x) for x in key])}")
+  print(f"hex key: {get_hex_list_str([ord(x) for x in key])}")
   nrounds, key_size = 44, 16
   if len(key) > 16:
     nrounds, key_size = 52, 24
@@ -228,22 +228,21 @@ def inv_matrix(m: list[list[int]]):
   return inverse_matrix
 
 def str_to_int_4x4_matrix(s: str):
-  matrix = [ord(i) for i in s]
+  matrix = [ord(i) for i in s] + [0]*(16 - len(s))
+  printd(f'hex input: {get_hex_list_str(matrix)}')
   matrix = [matrix[i:i+4] for i in range(0, len(matrix), 4)]
   return inv_matrix(matrix)
 
 def cipher(plain_text: str, key: str, nround: int = 10):
   w = key_expansion(key)
-
   res = []
   for i in range(0, len(plain_text), 16):
     res.extend(cipher16(plain_text[i:i+16], w, nround))
-
-  return ''.join(chr(valor) for valor in [y for x in res for y in x])
+  print(f"hex cipher: {' '.join(hex(value)[2:].zfill(2) for row in res for value in row)}")
+  return ''.join(chr(value) for row in res for value in row)
 
 def cipher16(plain_text: str, w: list[list[int]], nround: int):
   kinterval = 0
-
   printd(f'plain_text: {plain_text}')
   state = str_to_int_4x4_matrix(plain_text)
   printd(f'state: \n{get_matrix_str(state)}')
@@ -281,11 +280,11 @@ def cipher16(plain_text: str, w: list[list[int]], nround: int):
 
 def decipher(cript: str, key: str, nround: int = 10):
   w = key_expansion(key)
-
   res = []
   for i in range(0, len(cript), 16):
     res.extend(decipher16(cript[i:i+16], w, nround))
-  return ''.join(chr(valor) for valor in [y for x in res for y in x])
+  print(f"hex message: {' '.join(hex(value)[2:].zfill(2) for row in res for value in row)}")
+  return ''.join(chr(value) for row in res for value in row)
 
 def decipher16(cript: str, w: list[list[int]], nround: int):
   kinterval = nround*4
@@ -333,29 +332,29 @@ def hex_str_to_char_str(s: str):
 
 def main():
   # http://lpb.canb.auug.org.au/adfa/src/AEScalc/index.html
-  # key = bytes([i for i in range(16)]).decode('ascii') # key 000102030405060708090a0b0c0d0e0f
-  # plain_text = hex_str_to_char_str('00112233445566778899aabbccddeeff')
-  # cipher_text = cipher(plain_text, key)
-  # decipher_text = decipher(cipher_text, key)
-  # print(f'plain_text: {plain_text}') # expect 00112233445566778899aabbccddeeff
-  # print(f'cipher_text: {cipher_text}') # expect 69c4e0d86a7b0430d8cdb78070b4c55a
-  # print(f'decipher_text: {decipher_text}') # expect 00112233445566778899aabbccddeeff
+  key = bytes([i for i in range(16)]).decode('ascii') # key 000102030405060708090a0b0c0d0e0f
+  plain_text = hex_str_to_char_str('00112233445566778899aabbccddeeff')
+  cipher_text = cipher(plain_text, key)
+  decipher_text = decipher(cipher_text, key)
+  print(f'plain_text: {plain_text}') # expect 00112233445566778899aabbccddeeff
+  print(f'cipher_text: {cipher_text}') # expect 69c4e0d86a7b0430d8cdb78070b4c55a
+  print(f'decipher_text: {decipher_text}') # expect 00112233445566778899aabbccddeeff
  
 
   # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
-  key = 'Thats my Kung Fu' # 16 bytes 
-  # key = 'Thats my Kung Fu12345678' # 24 bytes
-  # key = 'Thats my Kung Fu1234567812345678' # 32 bytes
-  plain_text = 'Two One Nine Two'
-  nround = int(input('nround: '))
-  # ciphertext = '29C3505F571420F6402299B31A02D73A'
+  # key = 'Thats my Kung Fu' # 16 bytes 
+  # # key = 'Thats my Kung Fu12345678' # 24 bytes
+  # # key = 'Thats my Kung Fu1234567812345678' # 32 bytes
+  # plain_text = 'Two One Nine Two Three Four'
+  # nround = int(input('nround: '))
+  # # ciphertext = '29C3505F571420F6402299B31A02D73A'
 
-  cipher_text = cipher(plain_text, key, nround)
-  msg = decipher(cipher_text, key, nround)
-  print(f'chave: {key}')
-  print(f'mensagem original: {plain_text}')
-  print(f'mensagem cifrada: {cipher_text}')
-  print(f'mensagem decifrada: {msg}')
+  # cipher_text = cipher(plain_text, key, nround)
+  # msg = decipher(cipher_text, key, nround)
+  # print(f'chave: {key}')
+  # print(f'mensagem original: {plain_text}')
+  # print(f'mensagem cifrada: {cipher_text}')
+  # print(f'mensagem decifrada: {msg}')
 
 
 main()
