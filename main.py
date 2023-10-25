@@ -1,5 +1,5 @@
 
-DEBUG = True
+DEBUG = False # change it on main()
 
 def printd(*args, **kwargs):
   if DEBUG:
@@ -65,7 +65,9 @@ RCON = [
 ]
 
 def get_hex_list_str(l: list[int | str]):
-  return ' '.join([hex(i if type(i) is int else ord(i))[2:].zfill(2) for i in l])
+  int_l = [i if type(i) is int else ord(i) for i in l]
+  hex_l = [hex(i)[2:].zfill(2) for i in int_l]
+  return ' '.join([''.join(hex_l[i:i+4]) for i in range(0, len(hex_l), 4)])
 
 def get_matrix_str(m: list[list[int]]):
   return ' '.join([get_hex_list_str(i) for i in m])
@@ -323,23 +325,29 @@ def hex_str_to_char_str(s: str):
   return ''.join(res)
 
 def main():
+  global DEBUG
+  DEBUG = False
+
   # http://lpb.canb.auug.org.au/adfa/src/AEScalc/index.html
   key = bytes([i for i in range(16)]).decode('ascii') # key 000102030405060708090a0b0c0d0e0f
   plain_text = hex_str_to_char_str('00112233445566778899aabbccddeeff')
   cipher_text = cipher(plain_text, key)
   decipher_text = decipher(cipher_text, key)
-  print(f'plain_text: {plain_text}') # expect 00112233445566778899aabbccddeeff
-  print(f'cipher_text: {cipher_text}') # expect 69c4e0d86a7b0430d8cdb78070b4c55a
-  print(f'decipher_text: {decipher_text}') # expect 00112233445566778899aabbccddeeff
+  print(f'plain_text: {plain_text}')
+  print(f'plain_text (hex): {get_hex_list_str(plain_text)}') # expect 00112233445566778899aabbccddeeff
+  print(f'cipher_text: {cipher_text}')
+  print(f'cipher_text (hex): {get_hex_list_str(cipher_text)}') # expect 69c4e0d86a7b0430d8cdb78070b4c55a
+  print(f'decipher_text: {decipher_text}')
+  print(f'decipher_text (hex): {get_hex_list_str(decipher_text)}') # expect 00112233445566778899aabbccddeeff
  
 
   # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
   # key = 'Thats my Kung Fu' # 16 bytes 
   # key = 'Thats my Kung Fu12345678' # 24 bytes
   # key = 'Thats my Kung Fu1234567812345678' # 32 bytes
-  # plain_text = 'Two One Nine Two Three Four'
+  # plain_text = 'Two One Nine Two'
   # nround = int(input('nround (10/12/14): '))
-  # # ciphertext = '29C3505F571420F6402299B31A02D73A'
+  # # ciphertext = '29C3505F 571420F6 402299B3 1A02D73A'
 
   # cipher_text = cipher(plain_text, key, nround)
   # msg = decipher(cipher_text, key, nround)
@@ -347,6 +355,48 @@ def main():
   # print(f'mensagem original: {plain_text}')
   # print(f'mensagem cifrada: {cipher_text}')
   # print(f'mensagem decifrada: {msg}')
+
+  # return
+
+
+  options = ['Cifrar', 'Decifrar', 'Sair']
+  usr_input = ''
+  while usr_input != 'q':
+    print(f'{" AES ":=^20}')
+    for i in range(len(options)):
+      print(f'{i+1}. {options[i]}')
+    usr_input = input('Opção: ')
+
+
+    if usr_input == '1':
+      key = input('Chave: ')
+      plain_text = input('Texto: ')
+      nround = int(input('Número de rodadas (10/12/14): '))
+
+      cipher_text = cipher(plain_text, key, nround)
+      print(f'{" RESULTADO ":=^20}')
+      # print(f'Texto cifrado: {cipher_text}')
+      print(f'Texto cifrado (hex): {get_hex_list_str(cipher_text)}')
+    elif usr_input == '2':
+      key = input('Chave: ')
+      is_hex = ''
+      while is_hex.lower() not in ['s', 'n']:
+        is_hex = input('Texto em hexadecimal (s/n): ')
+      
+      cipher_text = input('Texto cifrado: ')
+      if is_hex.lower() == 's':
+        cipher_text = hex_str_to_char_str(cipher_text.replace(' ', ''))
+      
+      nround = int(input('Número de rodadas (10/12/14): '))
+      
+      plain_text = decipher(cipher_text, key, nround)
+      print(f'{" RESULTADO ":=^20}')
+      print(f'Texto decifrado: {plain_text}')
+      print(f'Texto decifrado (hex): {get_hex_list_str(plain_text)}')
+    elif usr_input == '3':
+      break
+    else:
+      print('Opção inválida!')
 
 
 main()
