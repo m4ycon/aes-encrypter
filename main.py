@@ -1,5 +1,5 @@
 
-DEBUG = False
+DEBUG = True
 
 def printd(*args, **kwargs):
   if DEBUG:
@@ -64,8 +64,8 @@ RCON = [
     0xD4, 0xB3, 0x7D, 0xFA, 0xEF, 0xC5, 0x91, 0x39
 ]
 
-def get_hex_list_str(l: list[int]):
-  return ' '.join([hex(i)[2:].zfill(2) for i in l])
+def get_hex_list_str(l: list[int | str]):
+  return ' '.join([hex(i if type(i) is int else ord(i))[2:].zfill(2) for i in l])
 
 def get_matrix_str(m: list[list[int]]):
   return ' '.join([get_hex_list_str(i) for i in m])
@@ -74,7 +74,7 @@ def xor_list(a: list[int], b: list[int]):
   return [i ^ j for i, j in zip(a, b)]
 
 def key_expansion(key: str):
-  print(f"hex key: {get_hex_list_str([ord(x) for x in key])}")
+  printd(f"hex key: {get_hex_list_str(key)}")
   nrounds, key_size = 44, 16
   if len(key) > 16:
     nrounds, key_size = 52, 24
@@ -109,8 +109,6 @@ def key_expansion(key: str):
     return xor_list(xor_list(a, b), c)
   
   def op2(i: int):
-    # print(f'eklist: {eklist}')
-    print(f'op2: {i-1} {i-jump}, {get_hex_list_str(ek(i-1))}^{get_hex_list_str(ek(i-jump))}')
     return xor_list(ek(i-1), ek(i-jump))
   
   def op3(i: int):
@@ -231,7 +229,7 @@ def cipher(plain_text: str, key: str, nround: int = 10):
   res = []
   for i in range(0, len(plain_text), 16):
     res.extend(cipher16(plain_text[i:i+16], w, nround))
-  print(f"hex cipher: {' '.join(hex(value)[2:].zfill(2) for row in res for value in row)}")
+  printd(f"hex cipher: {' '.join(hex(value)[2:].zfill(2) for row in res for value in row)}")
   return ''.join(chr(value) for row in res for value in row)
 
 def cipher16(plain_text: str, w: list[list[int]], nround: int):
@@ -277,7 +275,7 @@ def decipher(cript: str, key: str, nround: int = 10):
   res = []
   for i in range(0, len(cript), 16):
     res.extend(decipher16(cript[i:i+16], w, nround))
-  print(f"hex message: {' '.join(hex(value)[2:].zfill(2) for row in res for value in row)}")
+  printd(f"hex message: {' '.join(hex(value)[2:].zfill(2) for row in res for value in row)}")
   return ''.join(chr(value) for row in res for value in row)
 
 def decipher16(cript: str, w: list[list[int]], nround: int):
