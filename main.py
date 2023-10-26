@@ -1,3 +1,4 @@
+from random import randint
 
 DEBUG = False # change it on main()
 
@@ -159,7 +160,7 @@ def add_round_key(state: list[list[int]], key: list[list[int]]):
   key = inv_matrix(key)
   for r in range(0, 4):
     for c in range(0, 4):
-      state[r][c] = state[r][c] ^ key[r][c]
+      state[r][c] ^= key[r][c]
   return state
 
 def gf_mul(n1: int, n2: int):
@@ -188,8 +189,6 @@ def gf_mul(n1: int, n2: int):
     0x12, 0x36, 0x5A, 0xEE, 0x29, 0x7B, 0x8D, 0x8C, 0x8F, 0x8A, 0x85, 0x94, 0xA7, 0xF2, 0x0D, 0x17,
     0x39, 0x4B, 0xDD, 0x7C, 0x84, 0x97, 0xA2, 0xFD, 0x1C, 0x24, 0x6C, 0xB4, 0xC7, 0x52, 0xF6, 0x01
   ]
-
-  # verificar qual pode ser o L[0]
 
   L = [
     -1, 0x00, 0x19, 0x01, 0x32, 0x02, 0x1A, 0xC6, 0x4B, 0xC7, 0x1B, 0x68, 0x33, 0xEE, 0xDF, 0x03,
@@ -220,13 +219,16 @@ def inv_matrix(m: list[list[int]]):
         inverse_matrix[j][i] = m[i][j]
   return inverse_matrix
 
-def str_to_int_4x4_matrix(s: str):
+def str_to_matrix(s: str):
   matrix = [ord(i) for i in s] + [0]*(16 - len(s))
   printd(f'hex input: {get_hex_list_str(matrix)}')
   matrix = [matrix[i:i+4] for i in range(0, len(matrix), 4)]
   return inv_matrix(matrix)
 
-def cipher(plain_text: str, key: str, nround: int = 10):
+def cipher(plain_text: str, key: str, isHex: bool = False, nround: int = 10):
+  if (isHex):
+    cript = hex_str_to_char_str(cript)
+    key = hex_str_to_char_str(key)
   w = key_expansion(key)
   res = []
   for i in range(0, len(plain_text), 16):
@@ -238,7 +240,7 @@ def cipher16(plain_text: str, w: list[list[int]], nround: int):
   kinterval = 0
   printd(f'plain_text: {plain_text}')
   printd(f"hex plain_text: {get_hex_list_str([ord(x) for x in plain_text])}")
-  state = str_to_int_4x4_matrix(plain_text)
+  state = str_to_matrix(plain_text)
   printd(f'state: \n{get_matrix_str(state)}')
   printd(f'key: \n{get_matrix_str(w[kinterval:kinterval+4])}')
   state = add_round_key(state, w[kinterval:kinterval+4])
@@ -272,7 +274,10 @@ def cipher16(plain_text: str, w: list[list[int]], nround: int):
   return inv_matrix(state)
 
 
-def decipher(cript: str, key: str, nround: int = 10):
+def decipher(cript: str, key: str, isHex: bool = False, nround: int = 10):
+  if (isHex):
+    cript = hex_str_to_char_str(cript)
+    key = hex_str_to_char_str(key)
   w = key_expansion(key)
   res = []
   for i in range(0, len(cript), 16):
@@ -283,7 +288,7 @@ def decipher(cript: str, key: str, nround: int = 10):
 def decipher16(cript: str, w: list[list[int]], nround: int):
   kinterval = nround*4
   printd(f'cript: {cript}')
-  state = str_to_int_4x4_matrix(cript)
+  state = str_to_matrix(cript)
   printd(f'state: \n{get_matrix_str(state)}')
   printd(f'key: \n{get_matrix_str(w[kinterval:kinterval+4])}')
   state = add_round_key(state, w[kinterval:kinterval+4])
@@ -316,12 +321,32 @@ def decipher16(cript: str, w: list[list[int]], nround: int):
 
   return inv_matrix(state)
 
+def ctr(text: str, key: str, isHex: bool = False,  nrounds: int = 10, nonce: int = None):
+  if (isHex):
+    text = hex_str_to_char_str(text)
+    key = hex_str_to_char_str(key)
+  w = key_expansion(key)
+  counter = 0
+  if nonce is None:
+    nonce = randint(0, (2**64)-1)
+    print(f'nonce: {nonce}')
+    print(f"nonce (hex): {'0'*(32-len(hex(nonce+counter)[2:])) + hex(nonce+counter)[2:]}")
+  res = []
+  for i in range(0, len(text), 16):
+    offset = '0'*(32-len(hex(nonce+counter)[2:])) + hex(nonce+counter)[2:]
+    offset = [int(offset[i:i+2], 16) for i in range(0, len(offset), 2)]
+    plain_text = [chr(h) for h in offset]
+    cript_matrix = cipher16(plain_text, w, nrounds)
+    res.extend(xor_list([value for rows in cript_matrix for value in rows], [ord(c) for c in text[i:i+16]]))
+    counter += 1
+  printd(f"hex ctr: {' '.join(hex(value)[2:].zfill(2) for value in res)}")
+  return ''.join(chr(value) for value in res)
+
 
 def hex_str_to_char_str(s: str):
+  s = s.replace(' ', '')
   res = [s[i:i+2] for i in range(0, len(s), 2)]
   res = [chr(i) for i in [int(i, 16) for i in res]]
-  res = [res[i:i+4] for i in range(0, len(res), 4)]
-  res = [res[i][j] for i in range(0, 4) for j in range(0, 4)]
   return ''.join(res)
 
 def main():
@@ -329,22 +354,20 @@ def main():
   DEBUG = False
 
   # http://lpb.canb.auug.org.au/adfa/src/AEScalc/index.html
-  key = bytes([i for i in range(16)]).decode('ascii') # key 000102030405060708090a0b0c0d0e0f
-  plain_text = hex_str_to_char_str('00112233445566778899aabbccddeeff')
-  cipher_text = cipher(plain_text, key)
-  decipher_text = decipher(cipher_text, key)
-  print(f'plain_text: {plain_text}')
-  print(f'plain_text (hex): {get_hex_list_str(plain_text)}') # expect 00112233445566778899aabbccddeeff
-  print(f'cipher_text: {cipher_text}')
-  print(f'cipher_text (hex): {get_hex_list_str(cipher_text)}') # expect 69c4e0d86a7b0430d8cdb78070b4c55a
-  print(f'decipher_text: {decipher_text}')
-  print(f'decipher_text (hex): {get_hex_list_str(decipher_text)}') # expect 00112233445566778899aabbccddeeff
+  # key = '000102030405060708090a0b0c0d0e0f'
+  # plain_text = '00112233445566778899aabbccddeeff'
+  # cipher_text = cipher(plain_text, key)
+  # decipher_text = decipher(cipher_text, key)
+  # print(f'plain_text: {plain_text}')
+  # print(f'plain_text (hex): {get_hex_list_str(plain_text)}') # expect 00112233445566778899aabbccddeeff
+  # print(f'cipher_text: {cipher_text}')
+  # print(f'cipher_text (hex): {get_hex_list_str(cipher_text)}') # expect 69c4e0d86a7b0430d8cdb78070b4c55a
+  # print(f'decipher_text: {decipher_text}')
+  # print(f'decipher_text (hex): {get_hex_list_str(decipher_text)}') # expect 00112233445566778899aabbccddeeff
  
 
   # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
-  # key = 'Thats my Kung Fu' # 16 bytes 
-  # key = 'Thats my Kung Fu12345678' # 24 bytes
-  # key = 'Thats my Kung Fu1234567812345678' # 32 bytes
+  # key = 'Thats my Kung Fu'
   # plain_text = 'Two One Nine Two'
   # nround = int(input('nround (10/12/14): '))
   # # ciphertext = '29C3505F 571420F6 402299B3 1A02D73A'
@@ -356,9 +379,6 @@ def main():
   # print(f'mensagem cifrada: {cipher_text}')
   # print(f'mensagem decifrada: {msg}')
 
-  # return
-
-
   options = ['Cifrar', 'Decifrar', 'Sair']
   usr_input = ''
   while usr_input != 'q':
@@ -366,33 +386,38 @@ def main():
     for i in range(len(options)):
       print(f'{i+1}. {options[i]}')
     usr_input = input('Opção: ')
-
-
     if usr_input == '1':
+      print('Modo de operação:')
+      print('1. ECB')
+      print('2. CTR')
+      mode = input()
+      isHex = True if input('Entradas em hexadecimal? (s/n) ').lower() == 's' else False
       key = input('Chave: ')
       plain_text = input('Texto: ')
-      nround = int(input('Número de rodadas (10/12/14): '))
-
-      cipher_text = cipher(plain_text, key, nround)
+      nround = int(input('Número de rodadas: '))
+      if (mode == '1'):
+        cipher_text = cipher(plain_text, key, isHex, nround)
+      elif (mode == '2'):
+        cipher_text = ctr(plain_text, key, isHex, nround)
       print(f'{" RESULTADO ":=^20}')
-      # print(f'Texto cifrado: {cipher_text}')
       print(f'Texto cifrado (hex): {get_hex_list_str(cipher_text)}')
     elif usr_input == '2':
+      print('Modo de operação:')
+      print('1. ECB')
+      print('2. CTR')
+      mode = input()
+      isHex = True if input('Entradas em hexadecimal? (s/n) ').lower() == 's' else False
       key = input('Chave: ')
-      is_hex = ''
-      while is_hex.lower() not in ['s', 'n']:
-        is_hex = input('Texto em hexadecimal (s/n): ')
-      
       cipher_text = input('Texto cifrado: ')
-      if is_hex.lower() == 's':
-        cipher_text = hex_str_to_char_str(cipher_text.replace(' ', ''))
-      
-      nround = int(input('Número de rodadas (10/12/14): '))
-      
-      plain_text = decipher(cipher_text, key, nround)
+      nround = int(input('Número de rodadas: '))
+      if (mode == '1'):
+        msg = decipher(cipher_text, key, isHex, nround)
+      elif (mode == '2'):
+        nonce = int(input('Nonce: '))
+        msg = ctr(cipher_text, key, isHex, nround, nonce)
       print(f'{" RESULTADO ":=^20}')
-      print(f'Texto decifrado: {plain_text}')
-      print(f'Texto decifrado (hex): {get_hex_list_str(plain_text)}')
+      print(f'Texto decifrado: {msg}')
+      print(f'Texto decifrado (hex): {get_hex_list_str(msg)}')
     elif usr_input == '3':
       break
     else:
