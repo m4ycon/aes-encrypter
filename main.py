@@ -76,60 +76,35 @@ def get_matrix_str(m: list[list[int]]):
 def xor_list(a: list[int], b: list[int]):
   return [i ^ j for i, j in zip(a, b)]
 
-def key_expansion(key: str):
-  printd(f"hex key: {get_hex_list_str(key)}")
-  nrounds, key_size = 44, 16
-  if len(key) > 16:
-    nrounds, key_size = 52, 24
-  if len(key) > 24:
-    nrounds, key_size = 60, 32
-  jump = key_size // 4
-
+def key_expansion(key: str, nrounds: int = 10):
   printd(f'key: {key}')
-  ext_key = [ord(c) for c in key[:key_size]] + [0]*(key_size - len(key))
-  klist: list[list[int]] = [ext_key[i:i+4] for i in range(0, key_size, 4)]
+  ext_key = [ord(c) for c in key[:16]] + [0]*(16 - len(key))
+  klist: list[list[int]] = [ext_key[i:i+4] for i in range(0, 16, 4)]
   eklist: list[list[int]] = []
 
   def rot_word(word: list[int]):
     return word[1:] + [word[0]]
-
   def sub_word(word: list[int]):
     return sub_bytes([word, [0]*4, [0]*4, [0]*4])[0]
-
   def rcon(i: int):
     return [RCON[i], 0, 0, 0]
-
   def ek(offset: int):
-    return eklist[offset]
-
+    return eklist[offset//4]
   def k(offset: int):
-    return klist[offset]
-  
-  def op1(i: int):
-    a = sub_word(rot_word(ek(i-1)))
-    b = rcon(i//jump)
-    c = ek(i-jump)
-    return xor_list(xor_list(a, b), c)
-  
-  def op2(i: int):
-    return xor_list(ek(i-1), ek(i-jump))
-  
-  def op3(i: int):
-    return xor_list(sub_word(ek(i-1)), ek(i-jump))
-
-  # first rounds
-  for i in range(0, key_size, 4):
-    eklist.append(k(i//4))
-    printd(f'r{i//4}: {get_hex_list_str(eklist[i//4])}')
-
-  for i in range(len(eklist), nrounds):
-    if (i % jump == 0):
-      eklist.append(op1(i))
-      printd(f'--\nr{i}: {get_hex_list_str(eklist[i])}')
-    else:
-      eklist.append(op3(i) if jump == 8 and (i+4)%8 == 0 else op2(i))
-      printd(f'r{i}: {get_hex_list_str(eklist[i])}')
-
+    return klist[offset//4]
+  for i in range(0, 16, 4):
+    eklist.append(k(i))
+  printd(f'r0: \n{get_matrix_str(eklist[0:4])}')
+  for j in range(4, (nrounds+1)*4, 4):
+    i = j
+    a = sub_word(rot_word(ek((i-1)*4)))
+    b = rcon(i//4)
+    c = ek((i-4)*4)
+    eklist.append(xor_list(xor_list(a, b), c)); i += 1
+    eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
+    eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
+    eklist.append(xor_list(ek((i-1)*4), ek((i-4)*4))); i += 1
+    printd(f'r{j//4}: \n{get_matrix_str(eklist[j:j+4])}')
   return eklist
 
 def sub_bytes(state: list[list[int]], crypt: bool = True):
@@ -229,9 +204,9 @@ def str_to_matrix(s: str):
 
 def cipher(plain_text: str, key: str, isHex: bool = False, nround: int = 10):
   if (isHex):
-    cript = hex_str_to_char_str(cript)
+    plain_text = hex_str_to_char_str(plain_text)
     key = hex_str_to_char_str(key)
-  w = key_expansion(key)
+  w = key_expansion(key, nround)
   res = []
   for i in range(0, len(plain_text), 16):
     res.extend(cipher16(plain_text[i:i+16], w, nround))
@@ -280,7 +255,7 @@ def decipher(cript: str, key: str, isHex: bool = False, nround: int = 10):
   if (isHex):
     cript = hex_str_to_char_str(cript)
     key = hex_str_to_char_str(key)
-  w = key_expansion(key)
+  w = key_expansion(key, nround)
   res = []
   for i in range(0, len(cript), 16):
     res.extend(decipher16(cript[i:i+16], w, nround))
@@ -327,7 +302,7 @@ def ctr(text: str, key: str, isHex: bool = False,  nrounds: int = 10, nonce: int
   if (isHex):
     text = hex_str_to_char_str(text)
     key = hex_str_to_char_str(key)
-  w = key_expansion(key)
+  w = key_expansion(key, nrounds)
   counter = 0
   if nonce is None:
     nonce = randint(0, (2**64)-1)
@@ -394,7 +369,7 @@ def main():
       print('2. CTR')
       mode = input()
       isHex = True if input('Entradas em hexadecimal? (s/n) ').lower() == 's' else False
-      key = input('Chave: ')
+      key = input('Chave (128 bits): ')
       plain_text = input('Texto: ')
       nround = int(input('Número de rodadas: '))
       if (mode == '1'):
@@ -409,7 +384,7 @@ def main():
       print('2. CTR')
       mode = input()
       isHex = True if input('Entradas em hexadecimal? (s/n) ').lower() == 's' else False
-      key = input('Chave: ')
+      key = input('Chave (128 bits): ')
       cipher_text = input('Texto cifrado: ')
       nround = int(input('Número de rodadas: '))
       if (mode == '1'):
