@@ -133,35 +133,37 @@ def key_expansion(key: str):
   return eklist
 
 def sub_bytes(state: list[list[int]], crypt: bool = True):
-  new_state = [[0 for _ in range(4)] for _ in range(4)]
+  new_state = state.copy()
   lookup = SBOX if crypt else INV_SBOX
   for r in range(0, 4):
     for c in range(0, 4):
-      new_state[r][c] = lookup[state[r][c]]
+      new_state[r][c] = lookup[new_state[r][c]]
   return new_state
 
 def shift_rows(state: list[list[int]], crypt: bool = True):
+  new_state = state.copy()
   for rows in range(0, 4):
-    shift_left = state[rows][rows:] + state[rows][:rows]
-    shift_right = state[rows][-rows:] + state[rows][:-rows]
-    state[rows] = shift_left if crypt else shift_right
-  return state
+    shift_left = new_state[rows][rows:] + new_state[rows][:rows]
+    shift_right = new_state[rows][-rows:] + new_state[rows][:-rows]
+    new_state[rows] = shift_left if crypt else shift_right
+  return new_state
 
 def mix_columns(state: list[list[int]], crypt: bool = True):
   lookup = MIX_MUL_ENC if crypt else MIX_MUL_DEC
-  res = [[0 for _ in range(4)] for _ in range(4)]
+  new_state = [[0 for _ in range(4)] for _ in range(4)]
   for i in range(0, 4):
     for j in range(0, 4):
       for k in range(0, 4):
-        res[j][i] ^= gf_mul(state[k][i], lookup[j][k])
-  return res
+        new_state[j][i] ^= gf_mul(state[k][i], lookup[j][k])
+  return new_state
 
 def add_round_key(state: list[list[int]], key: list[list[int]]):
-  key = inv_matrix(key)
+  inv_key = inv_matrix(key)
+  new_state = state.copy()
   for r in range(0, 4):
     for c in range(0, 4):
-      state[r][c] ^= key[r][c]
-  return state
+      new_state[r][c] ^= inv_key[r][c]
+  return new_state
 
 def gf_mul(n1: int, n2: int):
 
