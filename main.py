@@ -298,8 +298,8 @@ def decipher16(cript: str, w: list[list[int]], nround: int):
 
   return inv_matrix(state)
 
-def ctr(text: str, key: str, isHex: bool = False,  nrounds: int = 10, nonce: int = None):
-  if (isHex):
+def ctr(text: str, key: str, is_hex: bool = False,  nrounds: int = 10, nonce: int = None):
+  if is_hex:
     text = hex_str_to_char_str(text)
     key = hex_str_to_char_str(key)
   w = key_expansion(key, nrounds)
@@ -312,7 +312,7 @@ def ctr(text: str, key: str, isHex: bool = False,  nrounds: int = 10, nonce: int
   for i in range(0, len(text), 16):
     offset = '0'*(32-len(hex(nonce+counter)[2:])) + hex(nonce+counter)[2:]
     offset = [int(offset[i:i+2], 16) for i in range(0, len(offset), 2)]
-    plain_text = [chr(h) for h in offset]
+    plain_text = ''.join([chr(h) for h in offset])
     cript_matrix = cipher16(plain_text, w, nrounds)
     res.extend(xor_list([value for rows in cript_matrix for value in rows], [ord(c) for c in text[i:i+16]]))
     counter += 1
@@ -325,6 +325,41 @@ def hex_str_to_char_str(s: str):
   res = [s[i:i+2] for i in range(0, len(s), 2)]
   res = [chr(i) for i in [int(i, 16) for i in res]]
   return ''.join(res)
+
+
+def handle_user_cipher():
+  print('Modo de operação:')
+  print('1. ECB')
+  print('2. CTR')
+  mode = input()
+  is_hex = True if input('Entradas em hexadecimal? (s/n) ').lower() == 's' else False
+  key = input('Chave (128 bits): ')
+  plain_text = input('Texto: ')
+  nround = int(input('Número de rodadas: '))
+  if (mode == '1'):
+    cipher_text = cipher(plain_text, key, is_hex, nround)
+  elif (mode == '2'):
+    cipher_text = ctr(plain_text, key, is_hex, nround)
+  print(f'{" RESULTADO ":=^20}')
+  print(f'Texto cifrado (hex): {get_hex_list_str(cipher_text)}')
+
+def handle_user_decipher():
+  print('Modo de operação:')
+  print('1. ECB')
+  print('2. CTR')
+  mode = input()
+  is_hex = True if input('Entradas em hexadecimal? (s/n) ').lower() == 's' else False
+  key = input('Chave (128 bits): ')
+  cipher_text = input('Texto cifrado: ')
+  nround = int(input('Número de rodadas: '))
+  if (mode == '1'):
+    msg = decipher(cipher_text, key, is_hex, nround)
+  elif (mode == '2'):
+    nonce = int(input('Nonce: ')) if not is_hex else int(input('Nonce (hex): '), 16)
+    msg = ctr(cipher_text, key, is_hex, nround, nonce)
+  print(f'{" RESULTADO ":=^20}')
+  print(f'Texto decifrado: {msg}')
+  print(f'Texto decifrado (hex): {get_hex_list_str(msg)}')
 
 def main():
   global DEBUG
@@ -362,39 +397,12 @@ def main():
     print(f'{" AES ":=^20}')
     for i in range(len(options)):
       print(f'{i+1}. {options[i]}')
+    
     usr_input = input('Opção: ')
     if usr_input == '1':
-      print('Modo de operação:')
-      print('1. ECB')
-      print('2. CTR')
-      mode = input()
-      isHex = True if input('Entradas em hexadecimal? (s/n) ').lower() == 's' else False
-      key = input('Chave (128 bits): ')
-      plain_text = input('Texto: ')
-      nround = int(input('Número de rodadas: '))
-      if (mode == '1'):
-        cipher_text = cipher(plain_text, key, isHex, nround)
-      elif (mode == '2'):
-        cipher_text = ctr(plain_text, key, isHex, nround)
-      print(f'{" RESULTADO ":=^20}')
-      print(f'Texto cifrado (hex): {get_hex_list_str(cipher_text)}')
+      handle_user_cipher()
     elif usr_input == '2':
-      print('Modo de operação:')
-      print('1. ECB')
-      print('2. CTR')
-      mode = input()
-      isHex = True if input('Entradas em hexadecimal? (s/n) ').lower() == 's' else False
-      key = input('Chave (128 bits): ')
-      cipher_text = input('Texto cifrado: ')
-      nround = int(input('Número de rodadas: '))
-      if (mode == '1'):
-        msg = decipher(cipher_text, key, isHex, nround)
-      elif (mode == '2'):
-        nonce = int(input('Nonce: '))
-        msg = ctr(cipher_text, key, isHex, nround, nonce)
-      print(f'{" RESULTADO ":=^20}')
-      print(f'Texto decifrado: {msg}')
-      print(f'Texto decifrado (hex): {get_hex_list_str(msg)}')
+      handle_user_decipher()
     elif usr_input == '3':
       break
     else:
