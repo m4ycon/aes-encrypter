@@ -361,7 +361,16 @@ def handle_user_decipher():
   print(f'Texto decifrado: {msg}')
   print(f'Texto decifrado (hex): {get_hex_list_str(msg)}')
 
-def test():
+def handle_file():
+  # file_addr = input('Endereço do arquivo: ')
+  file_addr = './decrypted.txt'
+
+  with open(file_addr, 'rb') as arq:
+    content = arq.read()
+    bytes = ''.join([hex(c)[2:] for c in content])
+    print(f'content: {content}')
+    print(f'bytes: {bytes}')
+    print(f'bytes: {[chr(int(bytes[i:i+2], 16)) for i in range(0, len(bytes), 2)]}')
   return
 
 def main():
@@ -394,14 +403,14 @@ def main():
   # print(f'mensagem cifrada: {cipher_text}')
   # print(f'mensagem decifrada: {msg}')
 
+  options = ['Cifrar', 'Decifrar', 'Ler arquivo', 'Sair']
   switcher = {
-    1: handle_user_cipher,
-    2: handle_user_decipher,
-    3: test,
-    4: exit
+    options.index('Cifrar')+1: handle_user_cipher,
+    options.index('Decifrar')+1: handle_user_decipher,
+    options.index('Ler arquivo')+1: handle_file,
+    options.index('Sair')+1: exit
   }
 
-  options = ['Cifrar', 'Decifrar', 'Teste', 'Sair']
   usr_input = 1
   while options[usr_input-1] != 'Sair':
     print(f'{" AES ":=^20}')
