@@ -418,39 +418,6 @@ def handle_user_decipher():
   return
 
 
-def handle_file():
-  file_addr = input('Endereço do arquivo: ')
-
-  # cipher
-  hex_str = ''
-  with open(file_addr, 'rb') as file:
-    content = file.read()
-    bytes_ = [hex(c)[2:].zfill(2) for c in content]
-    hex_str = ''.join(bytes_)
-  
-  res = handle_user_cipher(hex_str)
-
-  with open(file_addr, 'wb') as file:
-    bytes_ = [ord(i) for i in res]
-    bytes_ = bytes(bytes_)
-    file.write(bytes_)
-  ###
-
-  # decipher
-  hex_str = ''
-  with open(file_addr, 'rb') as file:
-    content = file.read()
-    bytes_ = [hex(c)[2:].zfill(2) for c in content]
-    hex_str = ''.join(bytes_)
-
-  res = handle_user_decipher(hex_str)
-  with open(file_addr, 'wb') as file:
-    bytes_ = [ord(i) for i in res]
-    bytes_ = bytes(bytes_)
-    file.write(bytes_)
-
-  return
-
 def main():
   global DEBUG
   DEBUG = False
@@ -481,11 +448,10 @@ def main():
   # print(f'mensagem cifrada: {cipher_text}')
   # print(f'mensagem decifrada: {msg}')
 
-  options = ['Cifrar', 'Decifrar', 'Ler arquivo', 'Sair']
+  options = ['Cifrar', 'Decifrar', 'Sair']
   switcher = {
     options.index('Cifrar')+1: handle_user_cipher,
     options.index('Decifrar')+1: handle_user_decipher,
-    options.index('Ler arquivo')+1: handle_file,
     options.index('Sair')+1: exit
   }
 
