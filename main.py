@@ -361,6 +361,9 @@ def handle_user_decipher():
   print(f'Texto decifrado: {msg}')
   print(f'Texto decifrado (hex): {get_hex_list_str(msg)}')
 
+def test():
+  return
+
 def main():
   global DEBUG
   DEBUG = False
@@ -391,22 +394,31 @@ def main():
   # print(f'mensagem cifrada: {cipher_text}')
   # print(f'mensagem decifrada: {msg}')
 
-  options = ['Cifrar', 'Decifrar', 'Sair']
-  usr_input = ''
-  while usr_input != 'q':
+  switcher = {
+    1: handle_user_cipher,
+    2: handle_user_decipher,
+    3: test,
+    4: exit
+  }
+
+  options = ['Cifrar', 'Decifrar', 'Teste', 'Sair']
+  usr_input = 1
+  while options[usr_input-1] != 'Sair':
     print(f'{" AES ":=^20}')
     for i in range(len(options)):
       print(f'{i+1}. {options[i]}')
     
     usr_input = input('Opção: ')
-    if usr_input == '1':
-      handle_user_cipher()
-    elif usr_input == '2':
-      handle_user_decipher()
-    elif usr_input == '3':
-      break
-    else:
+    try:
+      usr_input = int(usr_input)
+      if not (0 < int(usr_input) <= len(options)):
+        raise ValueError
+    except ValueError:
+      usr_input = 1
       print('Opção inválida!')
+      continue
+
+    switcher[usr_input]()
 
 
 main()
