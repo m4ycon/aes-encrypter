@@ -411,6 +411,8 @@ def handle_user_decipher():
   else:
     with open(file_addr, 'wb') as file:
       bytes_ = [ord(i) for i in msg]
+      while bytes_[-1] == 0: # filter 0's at the end
+        bytes_ = bytes_[:-1]
       bytes_ = bytes(bytes_)
       file.write(bytes_)
     print(f'Arquivo decifrado com sucesso!')
