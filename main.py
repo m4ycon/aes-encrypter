@@ -1,4 +1,5 @@
 from random import randint
+from PIL import Image
 
 DEBUG = False # change it on main()
 
@@ -323,6 +324,15 @@ def ctr(text: str, key: str, is_hex: bool = False,  nrounds: int = 10, nonce: in
   return ''.join(chr(value) for value in res)
 
 
+def read_ppm_header_body(filename):
+  # assumes that magic number is P6
+  with open(filename, 'rb') as f:
+    lines = f.readlines()
+    header = b''.join(lines[:3])
+    body = b''.join(lines[3:])
+  return header, body
+
+
 def hex_str_to_char_str(s: str):
   s = s.replace(' ', '')
   res = [s[i:i+2] for i in range(0, len(s), 2)]
@@ -331,47 +341,55 @@ def hex_str_to_char_str(s: str):
 
 
 def handle_user_cipher():
-  is_file = True if input('Deseja cifrar um arquivo? (s/n) ').lower() == 's' else False
-
-  is_hex = True
-  if (not is_file):
-    is_hex = True if input('Entradas em hexadecimal? (s/n) ').lower() == 's' else False
-
   print('Modo de operação:')
   print('1. ECB')
   print('2. CTR')
   mode = input()
-  key = input('Chave (128 bits): ' if not is_hex else 'Chave (hex 128 bits): ')
+  key = input('Chave (hex 128 bits): ')
   nround = int(input('Número de rodadas: '))
   
-  plain_text = ''
-  if (not is_file):
-    plain_text = input('Texto: ')
+  file_addr = input('Endereço do arquivo: ')
+  file_ext = file_addr.split('.')[-1]
+  is_image = file_ext == 'jpg' or file_ext == 'jpeg' or file_ext == 'png'
+
+  header, body = None, None
+  if is_image:
+    file_path = './' + ''.join(file_addr.split('.')[:-1])
+    ppm_path = file_path + '.ppm'
+    with Image.open(file_addr) as img:
+      img.save(ppm_path)
+    header, body = read_ppm_header_body(ppm_path)
+    bytes_ = [hex(c)[2:].zfill(2) for c in body]
+    plain_text = ''.join(bytes_)
   else:
-    file_addr = input('Endereço do arquivo: ')
+    content = bytes()
     with open(file_addr, 'rb') as file:
       content = file.read()
-      bytes_ = [hex(c)[2:].zfill(2) for c in content]
-      plain_text = ''.join(bytes_)
-
+    bytes_ = [hex(c)[2:].zfill(2) for c in content]
+    plain_text = ''.join(bytes_)
   
+  is_hex = True
   cipher_text = ''
   if (mode == '1'):
     cipher_text = cipher(plain_text, key, is_hex, nround)
   elif (mode == '2'):
     cipher_text = ctr(plain_text, key, is_hex, nround)
   
-  if (not is_file):
-    print(f'{" RESULTADO ":=^20}')
-    print(f'Texto cifrado (hex): {get_hex_list_str(cipher_text)}')
+  if is_image:
+    cip_path = file_path + '-encripted'
+    with open(cip_path + '.ppm', 'wb') as file:
+      file.write(header)
+      bytes_ = [ord(i) for i in cipher_text]
+      bytes_ = bytes(bytes_)
+      file.write(bytes_)
+    with Image.open(cip_path + '.ppm') as img:
+      img.save(cip_path + '.' + file_ext)
   else:
     with open(file_addr, 'wb') as file:
       bytes_ = [ord(i) for i in cipher_text]
       bytes_ = bytes(bytes_)
       file.write(bytes_)
-    print(f'Arquivo cifrado com sucesso!')
-  
-  return
+  print('Arquivo cifrado com sucesso!')
 
 
 def handle_user_decipher():
