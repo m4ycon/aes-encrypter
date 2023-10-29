@@ -215,7 +215,7 @@ def cipher(plain_text: str, key: str, isHex: bool = False, nround: int = 10):
   for i in range(0, len(plain_text), 16):
     res.extend(cipher16(plain_text[i:i+16], w, nround))
   printd(f"hex cipher: {' '.join(hex(value)[2:].zfill(2) for row in res for value in row)}")
-  return ''.join(chr(value) for row in res for value in row)
+  return ''.join(hex(value)[2:].zfill(2) if isHex else chr(value) for row in res for value in row)
 
 def cipher16(plain_text: str, w: list[list[int]], nround: int):
   kinterval = 0
@@ -264,7 +264,7 @@ def decipher(cript: str, key: str, isHex: bool = False, nround: int = 10):
   for i in range(0, len(cript), 16):
     res.extend(decipher16(cript[i:i+16], w, nround))
   printd(f"hex message: {' '.join(hex(value)[2:].zfill(2) for row in res for value in row)}")
-  return ''.join(chr(value) for row in res for value in row)
+  return ''.join(hex(value)[2:].zfill(2) if isHex else chr(value) for row in res for value in row)
 
 def decipher16(cript: str, w: list[list[int]], nround: int):
   kinterval = nround*4
@@ -302,8 +302,8 @@ def decipher16(cript: str, w: list[list[int]], nround: int):
 
   return inv_matrix(state)
 
-def ctr(text: str, key: str, is_hex: bool = False,  nrounds: int = 10, nonce: int = None):
-  if is_hex:
+def ctr(text: str, key: str, isHex: bool = False,  nrounds: int = 10, nonce: int = None):
+  if isHex:
     text = hex_str_to_char_str(text)
     key = hex_str_to_char_str(key)
   w = key_expansion(key, nrounds)
@@ -311,7 +311,7 @@ def ctr(text: str, key: str, is_hex: bool = False,  nrounds: int = 10, nonce: in
   if nonce is None:
     nonce = randint(0, (2**64)-1)
     print(f'nonce: {nonce}')
-    print(f"nonce (hex): {'0'*(32-len(hex(nonce+counter)[2:])) + hex(nonce+counter)[2:]}")
+    printd(f"nonce (hex): {'0'*(32-len(hex(nonce+counter)[2:])) + hex(nonce+counter)[2:]}")
   res = []
   for i in range(0, len(text), 16):
     offset = '0'*(32-len(hex(nonce+counter)[2:])) + hex(nonce+counter)[2:]
@@ -321,16 +321,24 @@ def ctr(text: str, key: str, is_hex: bool = False,  nrounds: int = 10, nonce: in
     res.extend(xor_list([value for rows in cript_matrix for value in rows], [ord(c) for c in text[i:i+16]]))
     counter += 1
   printd(f"hex ctr: {' '.join(hex(value)[2:].zfill(2) for value in res)}")
-  return ''.join(chr(value) for value in res)
+  return ''.join(hex(value)[2:].zfill(2) if isHex else chr(value) for value in res)
 
 
-def read_ppm_header_body(filename):
-  # assumes that magic number is P6
-  with open(filename, 'rb') as f:
-    lines = f.readlines()
-    header = b''.join(lines[:3])
-    body = b''.join(lines[3:])
-  return header, body
+def separate_bmp_header_body(file_path):
+  with open(file_path, 'rb') as f:
+    bmp = f.read()
+
+  # The BMP file header is 14 bytes
+  bmp_file_header = bmp[:14]
+  offset = int.from_bytes(bmp_file_header[10:14], byteorder='little')
+
+  # The BMP info header starts after the file header
+  bmp_info_header = bmp[14:14+offset]
+
+  # The BMP body starts after the info header
+  bmp_body = bmp[14+offset:]
+
+  return bmp_file_header, bmp_info_header, bmp_body
 
 
 def hex_str_to_char_str(s: str):
@@ -349,44 +357,27 @@ def handle_user_cipher():
   nround = int(input('Número de rodadas: '))
   
   file_addr = input('Endereço do arquivo: ')
-  file_ext = file_addr.split('.')[-1]
-  is_image = file_ext in ['jpg', 'jpeg', 'png']
+  is_hex = input('O arquivo está em hexadecimal? (s/n): ').lower() == 's'
 
-  header, body = None, None
-  if is_image:
-    file_path = './' + ''.join(file_addr.split('.')[:-1])
-    ppm_path = file_path + '.ppm'
-    with Image.open(file_addr) as img:
-      img.save(ppm_path)
-    header, body = read_ppm_header_body(ppm_path)
-    bytes_ = [hex(c)[2:].zfill(2) for c in body]
-    plain_text = ''.join(bytes_)
-  else:
-    content = bytes()
-    with open(file_addr, 'rb') as file:
-      content = file.read()
-    bytes_ = [hex(c)[2:].zfill(2) for c in content]
-    plain_text = ''.join(bytes_)
-  
-  is_hex = True
+  content = bytes()
+  with open(file_addr, 'rb') as file:
+    content = file.read()
+  bytes_ = [chr(c) if is_hex else hex(c)[2:].zfill(2) for c in content]
+  plain_text = ''.join(bytes_)
+
+  print(f'Texto original (hex): {plain_text if is_hex else get_hex_list_str(content)}')
+
   cipher_text = ''
   if (mode == '1'):
     cipher_text = cipher(plain_text, key, is_hex, nround)
   elif (mode == '2'):
     cipher_text = ctr(plain_text, key, is_hex, nround)
-  
-  if is_image:
-    cip_path = file_path + '-encripted'
-    with open(cip_path + '.ppm', 'wb') as file:
-      file.write(header)
-      bytes_ = bytes([ord(i) for i in cipher_text])
-      file.write(bytes_)
-    with Image.open(cip_path + '.ppm') as img:
-      img.save(cip_path + '.' + file_ext)
-  else:
-    with open(file_addr, 'wb') as file:
-      bytes_ = bytes([ord(i) for i in cipher_text])
-      file.write(bytes_)
+
+  with open(file_addr, 'wb') as file:
+    bytes_ = bytes([ord(i) for i in cipher_text])
+    print(bytes_)
+    file.write(bytes_)
+  print(f'Texto cifrado (hex): {cipher_text if is_hex else get_hex_list_str(cipher_text)}')
   print('Arquivo cifrado com sucesso!')
 
 
@@ -398,52 +389,30 @@ def handle_user_decipher():
   key = input('Chave (hex 128 bits): ')
   nround = int(input('Número de rodadas: '))
 
-  file_addr = input('Endereço do arquivo cifrado: ')
-  file_ext = file_addr.split('.')[-1]
-  is_image = file_ext in ['jpg', 'jpeg', 'png']
+  file_addr = input('Endereço do arquivo cifrado: ') 
+  is_hex = input('O arquivo está em hexadecimal? (s/n): ').lower() == 's'
 
-  cipher_text = ''
-  header, body = None, None
-  if is_image:
-    file_path = './' + ''.join(file_addr.split('.')[:-1])
-    ppm_path = file_path + '.ppm'
-    with Image.open(file_addr) as img:
-      img.save(ppm_path)
-    header, body = read_ppm_header_body(ppm_path)
-    bytes_ = [hex(c)[2:].zfill(2) for c in body]
-    cipher_text = ''.join(bytes_)
-  else:
-    content = bytes()
-    with open(file_addr, 'rb') as file:
-      content = file.read()
-    bytes_ = [hex(c)[2:].zfill(2) for c in content]
-    cipher_text = ''.join(bytes_)
+  content = bytes()
+  with open(file_addr, 'rb') as file:
+    content = file.read()
+  bytes_ = [chr(c) if is_hex else hex(c)[2:].zfill(2) for c in content]
+  cipher_text = ''.join(bytes_)
+  print(f'Texto cifrado (hex): {cipher_text if is_hex else get_hex_list_str(content)}')
 
-  is_hex = True
   if (mode == '1'):
     msg = decipher(cipher_text, key, is_hex, nround)
   elif (mode == '2'):
-    nonce = int(input('Nonce (hex): '), 16)
+    nonce = int(input('Nonce (int): '))
     msg = ctr(cipher_text, key, is_hex, nround, nonce)
   
-  if is_image:
-    dec_path = file_path + '-decripted'
-    with open(dec_path + '.ppm', 'wb') as file:
-      file.write(header)
-      bytes_ = bytes([ord(i) for i in msg])
-      file.write(bytes_)
-    with Image.open(dec_path + '.ppm') as img:
-      img.save(dec_path + '.' + file_ext)
-  else:
-    with open(file_addr, 'wb') as file:
-      bytes_ = [ord(i) for i in msg]
-      while bytes_[-1] == 0: # filter 0's at the end
-        bytes_ = bytes_[:-1]
-      bytes_ = bytes(bytes_)
-      file.write(bytes_)
-    print(f'Arquivo decifrado com sucesso!')
-
-  return
+  with open(file_addr, 'wb') as file:
+    bytes_ = [ord(i) for i in msg]
+    while bytes_[-1] == 0: # filter 0's at the end
+      bytes_ = bytes_[:-1]
+    bytes_ = bytes(bytes_)
+    file.write(bytes_)
+  print(f'Texto decifrado (hex): {msg if is_hex else get_hex_list_str(msg)}')
+  print('Arquivo decifrado com sucesso!')
 
 
 def main():
