@@ -1,5 +1,4 @@
 from random import randint
-from PIL import Image
 
 DEBUG = False # change it on main()
 
@@ -310,7 +309,7 @@ def ctr(text: str, key: str, isHex: bool = False,  nrounds: int = 10, nonce: int
   counter = 0
   if nonce is None:
     nonce = randint(0, (2**64)-1)
-    print(f'nonce: {nonce}')
+    print(f'nonce (dec): {nonce}')
     printd(f"nonce (hex): {'0'*(32-len(hex(nonce+counter)[2:])) + hex(nonce+counter)[2:]}")
   res = []
   for i in range(0, len(text), 16):
@@ -323,46 +322,26 @@ def ctr(text: str, key: str, isHex: bool = False,  nrounds: int = 10, nonce: int
   printd(f"hex ctr: {' '.join(hex(value)[2:].zfill(2) for value in res)}")
   return ''.join(hex(value)[2:].zfill(2) if isHex else chr(value) for value in res)
 
-
-def separate_bmp_header_body(file_path):
-  with open(file_path, 'rb') as f:
-    bmp = f.read()
-
-  # The BMP file header is 14 bytes
-  bmp_file_header = bmp[:14]
-  offset = int.from_bytes(bmp_file_header[10:14], byteorder='little')
-
-  # The BMP info header starts after the file header
-  bmp_info_header = bmp[14:14+offset]
-
-  # The BMP body starts after the info header
-  bmp_body = bmp[14+offset:]
-
-  return bmp_file_header, bmp_info_header, bmp_body
-
-
 def hex_str_to_char_str(s: str):
   s = s.replace(' ', '')
   res = [s[i:i+2] for i in range(0, len(s), 2)]
   res = [chr(i) for i in [int(i, 16) for i in res]]
   return ''.join(res)
 
-
 def handle_user_cipher():
   print('Modo de operação:')
   print('1. ECB')
   print('2. CTR')
   mode = input()
-  key = input('Chave (hex 128 bits): ')
-  nround = int(input('Número de rodadas: '))
-  
-  file_addr = input('Endereço do arquivo: ')
   is_hex = input('O arquivo está em hexadecimal? (s/n): ').lower() == 's'
+  key = input('Chave (hex 128 bits): ' if is_hex else 'Chave (ascii 128 bits): ')
+  nround = int(input('Número de rodadas: '))
+  file_addr = input('Endereço do arquivo: ')
 
   content = bytes()
   with open(file_addr, 'rb') as file:
     content = file.read()
-  bytes_ = [chr(c) if is_hex else hex(c)[2:].zfill(2) for c in content]
+  bytes_ = [chr(c) for c in content]
   plain_text = ''.join(bytes_)
 
   print(f'Texto original (hex): {plain_text if is_hex else get_hex_list_str(content)}')
@@ -375,34 +354,31 @@ def handle_user_cipher():
 
   with open(file_addr, 'wb') as file:
     bytes_ = bytes([ord(i) for i in cipher_text])
-    print(bytes_)
     file.write(bytes_)
   print(f'Texto cifrado (hex): {cipher_text if is_hex else get_hex_list_str(cipher_text)}')
   print('Arquivo cifrado com sucesso!')
-
 
 def handle_user_decipher():
   print('Modo de operação:')
   print('1. ECB')
   print('2. CTR')
   mode = input()
-  key = input('Chave (hex 128 bits): ')
-  nround = int(input('Número de rodadas: '))
-
-  file_addr = input('Endereço do arquivo cifrado: ') 
   is_hex = input('O arquivo está em hexadecimal? (s/n): ').lower() == 's'
+  key = input('Chave (hex 128 bits): ' if is_hex else 'Chave (ascii 128 bits): ')
+  nround = int(input('Número de rodadas: '))
+  file_addr = input('Endereço do arquivo cifrado: ')
 
   content = bytes()
   with open(file_addr, 'rb') as file:
     content = file.read()
-  bytes_ = [chr(c) if is_hex else hex(c)[2:].zfill(2) for c in content]
+  bytes_ = [chr(c) for c in content]
   cipher_text = ''.join(bytes_)
   print(f'Texto cifrado (hex): {cipher_text if is_hex else get_hex_list_str(content)}')
 
   if (mode == '1'):
     msg = decipher(cipher_text, key, is_hex, nround)
   elif (mode == '2'):
-    nonce = int(input('Nonce (int): '))
+    nonce = int(input('Nonce (dec): '))
     msg = ctr(cipher_text, key, is_hex, nround, nonce)
   
   with open(file_addr, 'wb') as file:
@@ -414,36 +390,9 @@ def handle_user_decipher():
   print(f'Texto decifrado (hex): {msg if is_hex else get_hex_list_str(msg)}')
   print('Arquivo decifrado com sucesso!')
 
-
 def main():
   global DEBUG
   DEBUG = False
-
-  # http://lpb.canb.auug.org.au/adfa/src/AEScalc/index.html
-  # key = '000102030405060708090a0b0c0d0e0f'
-  # plain_text = '00112233445566778899aabbccddeeff'
-  # cipher_text = cipher(plain_text, key)
-  # decipher_text = decipher(cipher_text, key)
-  # print(f'plain_text: {plain_text}')
-  # print(f'plain_text (hex): {get_hex_list_str(plain_text)}') # expect 00112233445566778899aabbccddeeff
-  # print(f'cipher_text: {cipher_text}')
-  # print(f'cipher_text (hex): {get_hex_list_str(cipher_text)}') # expect 69c4e0d86a7b0430d8cdb78070b4c55a
-  # print(f'decipher_text: {decipher_text}')
-  # print(f'decipher_text (hex): {get_hex_list_str(decipher_text)}') # expect 00112233445566778899aabbccddeeff
- 
-
-  # https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf
-  # key = 'Thats my Kung Fu'
-  # plain_text = 'Two One Nine Two'
-  # nround = int(input('nround (10/12/14): '))
-  # # ciphertext = '29C3505F 571420F6 402299B3 1A02D73A'
-
-  # cipher_text = cipher(plain_text, key, nround)
-  # msg = decipher(cipher_text, key, nround)
-  # print(f'chave: {key}')
-  # print(f'mensagem original: {plain_text}')
-  # print(f'mensagem cifrada: {cipher_text}')
-  # print(f'mensagem decifrada: {msg}')
 
   options = ['Cifrar', 'Decifrar', 'Sair']
   switcher = {
@@ -469,6 +418,5 @@ def main():
       continue
 
     switcher[usr_input]()
-
 
 main()
