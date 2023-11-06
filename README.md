@@ -1,4 +1,4 @@
-##Trabalho 2 - AES
+## Trabalho 2 - AES
 
 Segurança Computacional - Turma 01
 
@@ -14,7 +14,7 @@ Basta ter o python instalado e rodar o comando:
 ```bash
 py main.py
 ```
-#Obs
+# Obs
 
 Para alterar o texto que irá ser cifrado ou decifrado, basta alterar o conteúdo do arquivo input.txt.
 O conteúdo do arquivo pode ser interpretado tanto como caractere ascii como hexadecimal, é preciso apenas informar sua escolha no terminal quando requisitado.
